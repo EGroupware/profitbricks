@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE overlay PUBLIC "-//Stylite AG//eTemplate 2//EN" "http://www.egroupware.org/etemplate2.dtd">
+<!-- $Id$ -->
+<overlay>
+	<template id="profitbricks.config" template="" lang="" group="0" version="16.1">
+		<grid width="100%" class="admin-config egwGridView_grid">
+			<columns>
+				<column width="30%"/>
+				<column/>
+			</columns>
+			<rows>
+				<row>
+					<description value="Profitbricks credentials" span="all" class="subHeader"/>
+				</row>
+				<row>
+					<description value="Username"/>
+					<url-email id="newsettings[username]" size="40"/>
+				</row>
+				<row>
+					<description value="Password"/>
+					<passwd id="newsettings[password]" size="40"/>
+				</row>
+				<row>
+					<description value="Dyndns update" span="all" class="subHeader"/>
+				</row>
+			</rows>
+		</grid>
+	</template>
+</overlay>

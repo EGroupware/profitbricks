@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE overlay PUBLIC "-//Stylite AG//eTemplate 2//EN" "http://www.egroupware.org/etemplate2.dtd">
+<!-- $Id$ -->
+<overlay>
+	<template id="profitbricks.index.rows" template="" lang="" group="0" version="16.1.001">
+		<grid width="100%">
+			<columns>
+				<column width="200"/>
+				<column width="50%"/>
+				<column width="40"/>
+				<column width="120"/>
+				<column width="40"/>
+				<column width="60"/>
+				<column width="80"/>
+				<column width="100"/>
+				<column width="120"/>
+			</columns>
+			<rows>
+				<row class="th">
+					<nextmatch-sortheader label="Id" id="id"/>
+					<nextmatch-sortheader label="Name" id="properties[name]"/>
+					<nextmatch-sortheader label="Nics" id="nics"/>
+					<nextmatch-sortheader label="External IP" id="ips"/>
+					<nextmatch-sortheader label="Cores" id="properties[cores]"/>
+					<nextmatch-sortheader label="Ram" id="properties[ram]"/>
+					<nextmatch-sortheader label="Disks" id="volumes"/>
+					<nextmatch-header label="Status" id="properties[vmState]"/>
+					<nextmatch-sortheader label="Last modified" id="modified"/>
+				</row>
+				<row class="$row_cont[cat_id] $row_cont[class]">
+					<description id="${row}[id]"/>
+					<description id="${row}[properties][name]"/>
+					<description id="${row}[nics]"/>
+					<description id="${row}[ips]"/>
+					<description id="${row}[properties][cores]"/>
+					<description id="${row}[properties][ram]"/>
+					<description id="${row}[volumes]"/>
+					<description id="${row}[properties][vmState]"/>
+					<date-time id="${row}[modified]" readonly="true"/>
+				</row>
+			</rows>
+		</grid>
+	</template>
+	<template id="profitbricks.index" template="" lang="" group="0" version="16.1.001">
+		<nextmatch id="nm" options="profitbricks.index.rows" />
+	</template>
+</overlay>
