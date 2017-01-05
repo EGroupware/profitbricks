@@ -1,6 +1,6 @@
 <?php
 /**
- * EGroupware - Profitbricks - API
+ * EGroupware - Profitbricks - UI
  *
  * @link http://www.egroupware.org
  * @author Ralf Becker <rb-AT-egroupware.org>
@@ -45,7 +45,7 @@ class profitbricks_ui
 				'sort'           =>	'DESC',// IO direction of the sort: 'ASC' or 'DESC'
 				'row_id'         => 'id',
 				'row_modified'   => 'modified',
-				//'actions'        => self::get_actions(),
+				'actions'        => self::get_actions(),
 				'default_cols'   => '!id',
 				//'placeholder_actions' => array('add')
 			);
@@ -57,7 +57,9 @@ class profitbricks_ui
 			),
 		);
 
-		$etpl->exec('profitbricks.profitbricks_ui.index', $content, $sel_options);
+		$etpl->exec('profitbricks.profitbricks_ui.index', $content, $sel_options, array(), array(
+			'nm' => $content['nm'],
+		));
 	}
 
 	/**
@@ -72,7 +74,7 @@ class profitbricks_ui
 	{
 		if (empty($query['filter']))	// no datacenter selected
 		{
-			$rows = array();
+			$rows = $readonlys = array();
 			return 0;
 		}
 		$state = array_intersect_key($query, array_flip(array('filter','order','sort')));
@@ -140,6 +142,121 @@ class profitbricks_ui
 		});
 
 		return count($rows);
+	}
+
+	/**
+	 * Run or schedule an action
+	 *
+	 * @param string $action see get_actions
+	 * @param string|array $server id of server(s)
+	 * @param int|array $schedule =null int. number of secs to run action from now or array with schedule information
+	 */
+	public static function ajax_action($action, $server, $schedule=null)
+	{
+		$response = Api\Json\Response::get();
+
+		$matches = null;
+		if (!isset($schedule) && preg_match('/^([a-z]+)_(\d+)$/', $action, $matches))
+		{
+			$action = $matches[1];
+			$schedule = $matches[2];
+		}
+
+		if (isset($schedule))
+		{
+			$response->call('egw.message', 'Scheduling of '.$action.' for server '.implode(', ', (array)$server).' not yet implemented :-(');
+			return;
+		}
+
+		$datacenter = $GLOBALS['egw_info']['user']['preferences']['profitbricks']['state']['filter'];
+
+		foreach((array)$server as $server)
+		{
+			if (substr($server, 0, 14) == 'profitbricks::')
+			{
+				$server = substr($server, 14);
+			}
+			switch($action)
+			{
+				case 'start':
+				case 'stop':
+				case 'reboot':
+					$headers = profitbricks_api::post("datacenters/$datacenter/servers/$server/$action");
+					if ($headers[0] === 'HTTP/1.1 202 Accepted')
+					{
+						$response->call('egw.message', ucfirst($action).' of server '.implode(', ', (array)$server).' requested.');
+					}
+					else
+					{
+						$response->call('egw.message', ucfirst($action).' for server '.implode(', ', (array)$server).' failed: '.substr($headers[0], 9).'!', 'error');
+					}
+					break;
+
+				default:
+					$response->call('egw.message', ucfirst($action).' server '.implode(', ', (array)$server).' not yet implemented :-(');
+			}
+		}
+	}
+
+	/**
+	 * Actions on users
+	 *
+	 * @return array
+	 */
+	public static function get_actions()
+	{
+		static $actions = null;
+
+		if (!isset($actions))
+		{
+			$actions = array(
+				'start' => array(
+					'caption' => 'Start',
+					'allowOnMultiple' => false,
+					'onExecute' => 'javaScript:app.profitbricks.action',
+					'group' => $group=0,
+					'icon' => 'tick',
+				),
+				'reboot' => array(
+					'caption' => 'Reboot',
+					'allowOnMultiple' => false,
+					'onExecute' => 'javaScript:app.profitbricks.confirm',
+					'group' => $group,
+					'hint' => 'Server will be reset (not properly restarted)!',
+					'icon' => 'discard',
+				),
+				'stop' => array(
+					'caption' => 'Stop',
+					'allowOnMultiple' => false,
+					'onExecute' => 'javaScript:app.profitbricks.confirm',
+					'group' => $group,
+					'hint' => 'Server will be powered off (not shut down) and IP will change with next start!',
+					'icon' => 'logout',
+				),
+				'stop_300' => array(
+					'caption' => 'Stop in 5min',
+					'allowOnMultiple' => false,
+					'onExecute' => 'javaScript:app.profitbricks.confirm',
+					'group' => $group,
+					'hint' => 'Server will be powered off (not shut down) and IP will change with next start!',
+					'icon' => 'k_alarm',
+				),
+				'snapshot' => array(
+					'caption' => 'Create snapshot',
+					'allowOnMultiple' => false,
+					'group' => $group=5,
+					'icon' => 'export',
+				),
+				'schedule' => array(
+					'caption' => 'Schedule an action',
+					'onExecute' => 'javaScript:app.profitbricks.schedule',
+					'group' => ++$group,
+					'icon' => 'k_alarm',
+				),
+			);
+		}
+		//error_log(__METHOD__."() actions=".array2string($actions));
+		return $actions;
 	}
 
 	/**

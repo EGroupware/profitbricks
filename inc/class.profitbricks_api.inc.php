@@ -64,6 +64,41 @@ class profitbricks_api
 	}
 
 	/**
+	 * Post action to API
+	 *
+	 * @param string $what eg. "datacenters/$dc/servers/$server/$action"
+	 * @param array|string $body =null array get automatic www-form-urlencoded and send with content-type
+	 * @param array $header =array()
+	 * @param string& $response_body =null on return response body
+	 * @return array with items
+	 * @throws Api\Exception\NotFound
+	 */
+	static function post($what, $body=null, $header=array(), &$response_body=null)
+	{
+		$url = self::URL.$what;
+
+		if (is_array($body))
+		{
+			$body = http_build_query($body);
+			$header['Content-Type'] = 'application/x-www-form-urlencoded';
+		}
+		if (!($f = self::open($url, 'POST', $body, $header)) ||
+			!($response = stream_get_contents($f)))
+		{
+			error_log("Request to '$url' failed: ".$response);
+			if ($f) fclose($f);
+			throw new Api\Exception\NotFound("Request to '$url' failed!");
+		}
+		if ($f) fclose($f);
+
+		$response_headers = array();
+		$response_body = self::parse_response($response, $response_headers);
+		//error_log(__METHOD__."($what) POST to $url returned ".array2string($response_headers));
+
+		return $response_headers;
+	}
+
+	/**
 	 * Get items from API
 	 *
 	 * @param string $what eg. "datacenters" or "datacenters/$id/servers"
