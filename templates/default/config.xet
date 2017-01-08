@@ -23,6 +23,21 @@
 				<row>
 					<description value="Dyndns update" span="all" class="subHeader"/>
 				</row>
+				<row>
+					<vbox>
+						<description value="URL"/>
+						<description value="Use placeholders: $IP, $DNSNAME"/>
+					</vbox>
+					<url id="newsettings[dnsupdateurl]" size="80"/>
+				</row>
+				<row>
+					<description value="Username"/>
+					<url-email id="newsettings[dnsupdateusername]" size="40"/>
+				</row>
+				<row>
+					<description value="Password"/>
+					<passwd id="newsettings[dnsupdatepassword]" size="40"/>
+				</row>
 			</rows>
 		</grid>
 	</template>

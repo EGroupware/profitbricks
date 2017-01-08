@@ -64,6 +64,20 @@ class profitbricks_api
 	}
 
 	/**
+	 * Get single server in datacenter incl. further information (see $depth param)
+	 *
+	 * @param string $datacenter id of datacenter
+	 * @param string $server id of server
+	 * @param int $depth =1 eg. 2 for nics incl. ip
+	 * @return type
+	 * @throws Api\Exception\NotFound
+	 */
+	static function server($datacenter, $server, $depth=1)
+	{
+		return self::get('datacenters/'.$datacenter.'/servers/'.$server, $depth);
+	}
+
+	/**
 	 * Post action to API
 	 *
 	 * @param string $what eg. "datacenters/$dc/servers/$server/$action"
@@ -114,7 +128,8 @@ class profitbricks_api
 			!($response = stream_get_contents($f)) ||
 			!($json = self::parse_response($response)) ||
 			!($data = json_decode($json, true)) ||
-			!isset($data['items']) || !is_array($data['items']))
+			empty($data['type']) ||
+			$data['type'] == 'collection' && (!isset($data['items']) || !is_array($data['items'])))
 		{
 			error_log("Request to '$url' failed: ".$response);
 			if ($f) fclose($f);
@@ -122,7 +137,7 @@ class profitbricks_api
 		}
 		if ($f) fclose($f);
 
-		return $data['items'];
+		return $data['type'] == 'collection' ? $data['items'] : $data;
 	}
 
 	/**

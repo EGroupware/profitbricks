@@ -176,24 +176,48 @@ class profitbricks_ui
 			{
 				$server = substr($server, 14);
 			}
-			switch($action)
-			{
-				case 'start':
-				case 'stop':
-				case 'reboot':
-					$headers = profitbricks_api::post("datacenters/$datacenter/servers/$server/$action");
-					if ($headers[0] === 'HTTP/1.1 202 Accepted')
-					{
-						$response->call('egw.message', ucfirst($action).' of server '.implode(', ', (array)$server).' requested.');
-					}
-					else
-					{
-						$response->call('egw.message', ucfirst($action).' for server '.implode(', ', (array)$server).' failed: '.substr($headers[0], 9).'!', 'error');
-					}
-					break;
+			try {
+				// fetch name of $server and other details like it's external IP
+				$data = profitbricks_api::server($datacenter, $server, $action == 'dnsupdate' ? 2 : 1);
+				$servername = empty($data['properties']['name']) ? $server : $data['properties']['name'];
+				switch($action)
+				{
+					case 'start':
+					case 'stop':
+					case 'reboot':
+						$headers = profitbricks_api::post("datacenters/$datacenter/servers/$server/$action");
+						if ($headers[0] === 'HTTP/1.1 202 Accepted')
+						{
+							$response->call('egw.message', ucfirst($action).' of server '.$servername.' requested.');
+						}
+						else
+						{
+							$response->call('egw.message', ucfirst($action).' for server '.$servername.' failed: '.substr($headers[0], 9).'!', 'error');
+						}
+						break;
 
-				default:
-					$response->call('egw.message', ucfirst($action).' server '.implode(', ', (array)$server).' not yet implemented :-(');
+					case 'dnsupdate':
+						foreach($data['entities']['nics']['items'] as $item)
+						{
+							if ($item['properties']['dhcp'] && count($item['properties']['ips']))
+							{
+								$ip = $item['properties']['ips'][0];
+								break;
+							}
+						}
+						$ret = profitbricks_dns::update($servername, $ip, $headers);
+						list(, $http_status) = explode(' ', $headers[0], 2);
+						$response->call('egw.message', ucfirst($action).' of server '.$servername.' to IP '.$ip.': '.
+							($ret ? $ret : lang($ret === false ? 'Error '.$http_status : 'Success')),
+							$ret === false ? 'error' : 'success');
+						break;
+
+					default:
+						$response->call('egw.message', ucfirst($action).' server '.$servername.' not yet implemented :-(');
+				}
+			}
+			catch (Api\Exception $e) {
+				$response->call('egw.message', ucfirst($action).' for server '.$server.' failed: '.$e->getMessage(), 'error');
 			}
 		}
 	}
@@ -241,10 +265,18 @@ class profitbricks_ui
 					'hint' => 'Server will be powered off (not shut down) and IP will change with next start!',
 					'icon' => 'k_alarm',
 				),
+				'dnsupdate' => array(
+					'caption' => 'Update DNS',
+					'hint' => 'Update DNS of name with current external IP',
+					'allowOnMultiple' => false,
+					'group' => $group=5,
+					'onExecute' => 'javaScript:app.profitbricks.action',
+					'icon' => 'edit',
+				),
 				'snapshot' => array(
 					'caption' => 'Create snapshot',
 					'allowOnMultiple' => false,
-					'group' => $group=5,
+					'group' => ++$group,
 					'icon' => 'export',
 				),
 				'schedule' => array(
