@@ -4,9 +4,8 @@
  * @link http://www.egroupware.org
  * @author Ralf Becker <rb-AT-egroupware.org>
  * @package profitbricks
- * @copyright (c) 2017 by Ralf Becker <rb-AT-egroupware.org>
+ * @copyright (c) 2017-18 by Ralf Becker <rb-AT-egroupware.org>
  * @license http://opensource.org/licenses/gpl-license.php GPL - GNU General Public License
- * @version $Id$
  */
 
 /**
@@ -86,6 +85,22 @@ app.classes.profitbricks = AppJS.extend(
 				self.action(_args[0], _args[1]);
 			}
 		}, message, this.egw.lang('Confirmation required'), [action, selected]);
+	},
+
+	/**
+	 * Confirm an action: <action> server <server-name>?
+	 *
+	 * @param {egwAction} action
+	 * @param {egwActionObject[]} selected
+	 */
+	console: function(action, selected)
+	{
+		var data = this.egw.dataGetUIDdata(selected[0].id);
+
+		this.egw.openPopup('https://my.profitbricks.com/dashboard/dcdr2/noVnc/connect.html?uuid='+
+			encodeURIComponent(data.data.id)+'&name='+encodeURIComponent(data.data.properties.name)+
+			'&nocache='+'16290.705733353605'+'&lang='+encodeURIComponent(this.egw.preference('lang'))
+			+'&useProxy=false', 800, 600, data.data.properties.name);
 	},
 
 	/**

@@ -5,9 +5,8 @@
  * @link http://www.egroupware.org
  * @author Ralf Becker <rb-AT-egroupware.org>
  * @package profitbricks
- * @copyright (c) 2017 by Ralf Becker <rb-AT-egroupware.org>
+ * @copyright (c) 2017-18 by Ralf Becker <rb-AT-egroupware.org>
  * @license http://opensource.org/licenses/gpl-license.php GPL - GNU General Public License
- * @version $Id$
  */
 
 
@@ -257,14 +256,14 @@ class profitbricks_ui
 					'hint' => 'Server will be powered off (not shut down) and IP will change with next start!',
 					'icon' => 'logout',
 				),
-				'stop_300' => array(
+				/*'stop_300' => array(
 					'caption' => 'Stop in 5min',
 					'allowOnMultiple' => false,
 					'onExecute' => 'javaScript:app.profitbricks.confirm',
 					'group' => $group,
 					'hint' => 'Server will be powered off (not shut down) and IP will change with next start!',
 					'icon' => 'k_alarm',
-				),
+				),*/
 				'dnsupdate' => array(
 					'caption' => 'Update DNS',
 					'hint' => 'Update DNS of name with current external IP',
@@ -273,7 +272,7 @@ class profitbricks_ui
 					'onExecute' => 'javaScript:app.profitbricks.action',
 					'icon' => 'edit',
 				),
-				'snapshot' => array(
+				/*'snapshot' => array(
 					'caption' => 'Create snapshot',
 					'allowOnMultiple' => false,
 					'group' => ++$group,
@@ -284,7 +283,14 @@ class profitbricks_ui
 					'onExecute' => 'javaScript:app.profitbricks.schedule',
 					'group' => ++$group,
 					'icon' => 'k_alarm',
-				),
+				),*/
+				'console' => array(
+					'caption' => 'Open console',
+					'allowOnMultiple' => false,
+					'onExecute' => 'javaScript:app.profitbricks.console',
+					'group' => ++$group,
+					'icon' => 'console',
+				)
 			);
 		}
 		//error_log(__METHOD__."() actions=".array2string($actions));
