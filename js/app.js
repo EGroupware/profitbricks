@@ -4,7 +4,7 @@
  * @link http://www.egroupware.org
  * @author Ralf Becker <rb-AT-egroupware.org>
  * @package profitbricks
- * @copyright (c) 2017-18 by Ralf Becker <rb-AT-egroupware.org>
+ * @copyright (c) 2017-19 by Ralf Becker <rb-AT-egroupware.org>
  * @license http://opensource.org/licenses/gpl-license.php GPL - GNU General Public License
  */
 
@@ -97,7 +97,7 @@ app.classes.profitbricks = AppJS.extend(
 	{
 		var data = this.egw.dataGetUIDdata(selected[0].id);
 
-		this.egw.openPopup('https://my.profitbricks.com/dashboard/dcdr2/noVnc/connect.html?uuid='+
+		this.egw.openPopup('https://dcd.ionos.com/latest/noVnc/connect.html?uuid='+
 			encodeURIComponent(data.data.id)+'&name='+encodeURIComponent(data.data.properties.name)+
 			'&nocache='+'16290.705733353605'+'&lang='+encodeURIComponent(this.egw.preference('lang'))
 			+'&useProxy=false', 800, 600, data.data.properties.name);
