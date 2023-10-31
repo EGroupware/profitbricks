@@ -13,6 +13,7 @@
 use EGroupware\Api;
 use EGroupware\Api\Etemplate;
 use EGroupware\Api\Egw;
+use EGroupware\Profitbricks\Api\Cloud;
 
 class profitbricks_ui
 {
@@ -22,7 +23,49 @@ class profitbricks_ui
 	 */
 	public $public_functions = array(
 		'index' => true,
+		's3add' => true,
 	);
+
+	function s3add(array $content=null)
+	{
+		$tpl = new Etemplate('profitbricks.s3add');
+
+		if (is_array($content))
+		{
+			$button = key($content['button'] ?? []);
+			unset($content['button']);
+			try {
+				switch($button)
+				{
+					case 'create':
+						try {
+							$user = Cloud\User::get($content['email']);
+							Api\Framework::message(lang('User already exists.'));
+						}
+						catch(Api\Exception\NotFound $e) {
+							$user = Cloud\User::add([
+								'administrator' => false,
+								'active' => true,
+							]+array_intersect_key($content, array_flip(['firstname', 'lastname', 'email', 'password'])));
+							$user->addMembership('S3customers');
+							Api\Framework::message(lang('User created.'));
+						}
+						$key = current($user->getS3keys());
+						$content['secretId'] = $key->id;
+						$content['secretKey'] = $key->secretKey;
+						break;
+
+					case 'clear':
+						$content = [];
+				}
+			}
+			catch (\Exception $e) {
+				Api\Framework::message($e->getMessage(), 'error');
+			}
+		}
+
+		$tpl->exec('profitbricks.profitbricks_ui.s3add', $content ?? []);
+	}
 
 	/**
 	 * Show list of servers
@@ -310,7 +353,8 @@ class profitbricks_ui
 		if ($GLOBALS['egw_info']['user']['apps']['admin'])
 		{
 			$file = Array(
-				'Site Configuration' => Egw::link('/index.php','menuaction=admin.admin_config.index&appname=' . $appname,'&ajax=true'),
+				'Site Configuration' => Egw::link('/index.php','menuaction=admin.admin_config.index&appname=' . $appname.'&ajax=true', 'admin'),
+				'Add S3 credentials' => Egw::link('/index.php','menuaction=profitbricks.profitbricks_ui.s3add&ajax=true'),
 			);
 			if ($location == 'admin')
 			{

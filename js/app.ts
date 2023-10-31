@@ -71,6 +71,15 @@ class ProfitbricksApp extends EgwApp
 		}
 	}
 
+	instanceChanged(_ev, _widget)
+	{
+		const instance = _widget.value;
+		this.et2.setValueById('firstname', instance.split('.').shift());
+		this.et2.setValueById('lastname', instance.split('.').slice(1, 3).join('.'));
+		this.et2.setValueById('email', 's3@'+instance);
+		this.et2.getWidgetById('password').suggestPassword();
+	}
+
 	/**
 	 * Confirm an action: <action> server <server-name>?
 	 *

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE overlay PUBLIC "-//EGroupware GmbH//eTemplate 2//EN" "http://www.egroupware.org/etemplate2.dtd">
+<!-- $Id$ -->
+<overlay>
+	<template id="profitbricks.s3add" template="" lang="" group="0" version="16.1">
+		<grid width="100%" class="admin-config egwGridView_grid">
+			<columns>
+				<column width="30%"/>
+				<column/>
+			</columns>
+			<rows>
+				<row>
+					<description value="Profitbricks credentials" span="all" class="subHeader"/>
+				</row>
+				<row>
+					<description value="Instance"/>
+					<textbox id="instance" size="40" onchange="app.profitbricks.instanceChanged"/>
+				</row>
+				<row>
+					<description value="Firstname"/>
+					<hbox>
+						<textbox id="firstname" size="20"/>
+						<textbox label="Lastname" id="lastname" size="20"/>
+					</hbox>
+				</row>
+				<row>
+					<description value="Email"/>
+					<url-email id="email" size="40"/>
+				</row>
+				<row>
+					<description value="Password"/>
+					<passwd id="password" size="40" suggest="20"/>
+				</row>
+				<row>
+					<hbox>
+						<button id="button[create]" label="Create"/>
+						<button id="button[clear]" label="Clear"/>
+					</hbox>
+				</row>
+				<row disabled="!@secretId">
+					<description value="SecretId"/>
+					<description id="secretId"/>
+				</row>
+				<row disabled="!@secretKey">
+					<description value="SecretKey"/>
+					<description id="secretKey"/>
+				</row>
+			</rows>
+		</grid>
+	</template>
+</overlay>
