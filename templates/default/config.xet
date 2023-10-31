@@ -14,11 +14,15 @@
 				</row>
 				<row>
 					<description value="Username"/>
-					<url-email id="newsettings[username]" size="40"/>
+					<url-email id="newsettings[username]" placeholder="Only required, if no token specified" size="40"/>
 				</row>
 				<row>
 					<description value="Password"/>
-					<passwd id="newsettings[password]" size="40"/>
+					<passwd id="newsettings[password]" placeholder="Only required, if no token specified" size="40"/>
+				</row>
+				<row>
+					<description value="Token"/>
+					<passwd id="newsettings[token]"/>
 				</row>
 				<row>
 					<description value="Dyndns update" span="all" class="subHeader"/>

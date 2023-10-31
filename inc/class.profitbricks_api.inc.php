@@ -14,7 +14,9 @@ use EGroupware\Api;
 
 class profitbricks_api
 {
-	const URL = 'https://api.profitbricks.com/cloudapi/v3/';
+	const APP = 'profitbricks';
+	const CLOUD_API = 'https://api.ionos.com/cloudapi/v6/';
+	const AUTH_API = 'https://api.ionos.com/auth/v1/';
 
 	/**
 	 * Config of app
@@ -22,6 +24,21 @@ class profitbricks_api
 	 * @var array
 	 */
 	protected static $config;
+
+	/**
+	 * Generate token to use instead of user credentials
+	 *
+	 * @param ?string $contract_number send as X-Contract-Number header, required for multiple contracts
+	 * @return ?string
+	 */
+	static function tokenGenerate(string $contract_number=null)
+	{
+		$response = self::get(self::AUTH_API.'tokens/generate', null, !empty($contract_number) ? [
+			'X-Contract-Number' => $contract_number,
+		] : []);
+
+		return $response['token'] ?? null;
+	}
 
 	/**
 	 * Get datacenters
@@ -54,8 +71,8 @@ class profitbricks_api
 	 * Get servers in datacenter incl. further information (see $depth param)
 	 *
 	 * @param string $datacenter id of datacenter
-	 * @param int $depth =1 eg. 3 for nics incl. ip
-	 * @return type
+	 * @param int $depth =1 e.g. 3 for nics incl. ip
+	 * @return array
 	 * @throws Api\Exception\NotFound
 	 */
 	static function servers($datacenter, $depth=1)
@@ -69,7 +86,7 @@ class profitbricks_api
 	 * @param string $datacenter id of datacenter
 	 * @param string $server id of server
 	 * @param int $depth =1 eg. 2 for nics incl. ip
-	 * @return type
+	 * @return array
 	 * @throws Api\Exception\NotFound
 	 */
 	static function server($datacenter, $server, $depth=1)
@@ -89,7 +106,7 @@ class profitbricks_api
 	 */
 	static function post($what, $body=null, $header=array(), &$response_body=null)
 	{
-		$url = self::URL.$what;
+		$url = self::CLOUD_API.$what;
 
 		if (is_array($body))
 		{
@@ -115,20 +132,21 @@ class profitbricks_api
 	/**
 	 * Get items from API
 	 *
-	 * @param string $what eg. "datacenters" or "datacenters/$id/servers"
-	 * @param int $depth =0
-	 * @return array with items
+	 * @param string $what eg. "datacenters" or "datacenters/$id/servers" or full URL eg. self::AUTH_API.'token/generate'
+	 * @param ?int $depth =0 added as get parameter, if NOT null
+	 * @return array with items, for collection or just response data otherwise
 	 * @throws Api\Exception\NotFound
 	 */
-	protected static function get($what, $depth=0)
+	protected static function get(string $what, ?int $depth=0, array $headers=[])
 	{
-		$url = self::URL.$what.'?depth='.(int)$depth;
+		$url = (substr($what, 0,8) === 'https://'?'':self::CLOUD_API).
+			$what.(isset($depth)?'?depth='.$depth:'');
 
-		if (!($f = self::open($url)) ||
+		if (!($f = self::open($url, 'GET', '', $headers)) ||
 			!($response = stream_get_contents($f)) ||
 			!($json = self::parse_response($response)) ||
 			!($data = json_decode($json, true)) ||
-			empty($data['type']) ||
+			empty($data['type']) && empty($data['token']) ||
 			$data['type'] == 'collection' && (!isset($data['items']) || !is_array($data['items'])))
 		{
 			error_log("Request to '$url' failed: ".$response);
@@ -153,12 +171,14 @@ class profitbricks_api
 	protected static function open($url, $method='GET', $body='', array $header=array(), $timeout=2)
 	{
 		if (empty($header['Authorization']) &&
-			empty(self::$config['username']) || empty(self::$config['password']))
+			(empty(self::$config['username']) || empty(self::$config['password'])) &&
+			empty(self::$config['token']))
 		{
 			Api\Egw::redirect_link('/index.php','menuaction=admin.admin_config.index&appname=profitbricks&ajax=true', 'admin');
 		}
 		// add default authentication header
-		$header += array('Authorization' => 'Basic '.base64_encode(self::$config['username'].':'.self::$config['password']));
+		$header += ['Authorization' => !empty(self::$config['token']) ? 'Bearer '.self::$config['token'] :
+			'Basic '.base64_encode(self::$config['username'].':'.self::$config['password'])];
 
 		$parts = is_array($url) ? $url : parse_url($url);
 		$addr = ($parts['scheme'] == 'https'?'ssl://':'tcp://').$parts['host'].':';
@@ -238,7 +258,17 @@ class profitbricks_api
 
 	public static function init_static()
 	{
-		self::$config = Api\Config::read('profitbricks');
+		self::$config = Api\Config::read(self::APP);
+
+		// generate token to use instead of password
+		if (!empty(self::$config['username']) && !empty(self::$config['password']) && empty(self::$config['token']))
+		{
+			if (self::$config['token'] = profitbricks_api::tokenGenerate())
+			{
+				Api\Config::save_value('token', self::$config['token'], self::APP);
+				Api\Config::save_value('password', self::$config['password']=null, self::APP);
+			}
+		}
 	}
 }
 profitbricks_api::init_static();
