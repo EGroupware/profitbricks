@@ -81,6 +81,6 @@ class Group extends Base
 	 */
 	public function addMember(User $user)
 	{
-		self::call(self::BASE."/$this->id/users", [], $user);
+		self::call(self::BASE."/$this->id/users", [], [], 'POST', $user);
 	}
 }

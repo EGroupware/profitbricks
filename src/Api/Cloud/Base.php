@@ -161,10 +161,11 @@ abstract class Base implements \JsonSerializable
 	 * Get item specified by its Id or another uniq attribute
      *
 	 * @param string $id
+	 * @param int $depth
 	 * @return static
 	 * @throws Api\Exception\NotFound
 	 */
-	static function get(string $id) : static
+	static function get(string $id, int $depth=1) : static
 	{
 		if (!self::isUuid($id))
 		{
@@ -174,7 +175,7 @@ abstract class Base implements \JsonSerializable
 	            $limit = 100;
 	            do
 	            {
-		            foreach ($items = static::index(1, $offset, $limit) as $item)
+		            foreach ($items = static::index($depth, $offset, $limit) as $item)
 		            {
 			            if ($item->$attr === $id)
 			            {

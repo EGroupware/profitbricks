@@ -39,7 +39,7 @@ class profitbricks_ui
 				{
 					case 'create':
 						try {
-							$user = Cloud\User::get($content['email']);
+							$user = Cloud\User::get($content['email'], 2);
 							Api\Framework::message(lang('User already exists.'));
 						}
 						catch(Api\Exception\NotFound $e) {
@@ -47,12 +47,61 @@ class profitbricks_ui
 								'administrator' => false,
 								'active' => true,
 							]+array_intersect_key($content, array_flip(['firstname', 'lastname', 'email', 'password'])));
-							$user->addMembership('S3customers');
 							Api\Framework::message(lang('User created.'));
 						}
+						if (empty($user->entities['groups']['items']))
+						{
+							$user->addMembership($group='S3customers');
+							Api\Framework::message(lang('User added to group "%1"', $group));
+						}
 						$key = current($user->getS3keys());
-						$content['secretId'] = $key->id;
-						$content['secretKey'] = $key->secretKey;
+						$instanceShort = preg_replace('/^([^.]+)\.egroupware(-italia)?\.(.*)$/', '$1-$3', $content['instance']);
+						$storages = [];
+						$buckets = null;
+						// AsyncAWS does NOT validate IONOS LocationConstraint / regions
+						// so we have to overwrite / alias the constraint class
+						class_alias(AlwaysExists::class, 'AsyncAws\S3\Enum\BucketLocationConstraint');
+						foreach([
+							'de' => 'https://s3-eu-central-1.ionoscloud.com',
+							'eu-central-2' => 'https://s3-eu-central-2.ionoscloud.com',
+						] as $region => $endpoint)
+						{
+							$s3 = new AsyncAws\S3\S3Client([
+								'endpoint' => $endpoint,
+								'accessKeyId' => $key->id,
+								'accessKeySecret' => $key->secretKey,
+								'region' => $region,
+							]);
+							if (!isset($buckets))
+							{
+								$request = $s3->listBuckets([]);
+								$buckets = [];
+								foreach($request->getBuckets() as $bucket)
+								{
+									$buckets[] = $bucket->getName();
+								}
+							}
+							$bucket = $instanceShort . (substr($region, -1) === '2' ? '2' : '');
+
+							if (!in_array($bucket, $buckets))
+							{
+								$request = $s3->createBucket([
+									'Bucket' => $bucket,
+									'CreateBucketConfiguration' => [
+										'LocationConstraint' => $region,
+									],
+									'@region' => $region,
+								]);
+								$request->resolve();
+							}
+							$storages[] = [
+								'endpoint' => $endpoint,
+								'accessKeyId' => $key->id,
+								'accessKeySecret' => $key->secretKey,
+								'Bucket' => $bucket,
+							];
+						}
+						$content['s3_storages'] = json_encode($storages, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES);
 						break;
 
 					case 'clear':
@@ -61,6 +110,7 @@ class profitbricks_ui
 			}
 			catch (\Exception $e) {
 				Api\Framework::message($e->getMessage(), 'error');
+				unset($content['s3_storages']);
 			}
 		}
 
@@ -365,5 +415,16 @@ class profitbricks_ui
 				display_sidebox($appname, lang('Admin'), $file);
 			}
 		}
+	}
+}
+
+/**
+ * Class with static method exists, always returning true
+ */
+class AlwaysExists
+{
+	static function exists($v)
+	{
+		return true;
 	}
 }

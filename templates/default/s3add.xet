@@ -10,7 +10,7 @@
 			</columns>
 			<rows>
 				<row>
-					<description value="Profitbricks credentials" span="all" class="subHeader"/>
+					<description value="Add/get S3 credentials" span="all" class="subHeader"/>
 				</row>
 				<row>
 					<description value="Instance"/>
@@ -37,13 +37,11 @@
 						<button id="button[clear]" label="Clear"/>
 					</hbox>
 				</row>
-				<row disabled="!@secretId">
-					<description value="SecretId"/>
-					<description id="secretId"/>
-				</row>
-				<row disabled="!@secretKey">
-					<description value="SecretKey"/>
-					<description id="secretKey"/>
+				<row disabled="!@s3_storages">
+					<groupbox span="all">
+						<caption label="S3-Storages (s3_storages)"/>
+						<description id="s3_storages" span="all"/>
+					</groupbox>
 				</row>
 			</rows>
 		</grid>
