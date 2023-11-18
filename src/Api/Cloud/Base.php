@@ -422,7 +422,7 @@ abstract class Base implements \JsonSerializable
 		// generate token to use instead of password
 		if (!empty(self::$config['username']) && !empty(self::$config['password']) && empty(self::$config['token']))
 		{
-			if (self::$config['token'] = profitbricks_api::tokenGenerate())
+			if (self::$config['token'] = \profitbricks_api::tokenGenerate())
 			{
 				Api\Config::save_value('token', self::$config['token'], self::APP);
 				Api\Config::save_value('password', self::$config['password']=null, self::APP);
