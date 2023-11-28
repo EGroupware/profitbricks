@@ -56,7 +56,7 @@ class S3
 				]+$user);
 			$msgs[] = lang('User created.');
 		}
-		if (empty($user->entities['groups']['items']))
+		if (!isset($user->entities) || empty($user->entities['groups']['items']))
 		{
 			$user->addMembership($group = $group ?: 'S3customers');
 			$msgs[] = lang('User added to group "%1"', $group);
