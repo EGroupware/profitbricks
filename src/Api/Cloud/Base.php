@@ -131,7 +131,7 @@ abstract class Base implements \JsonSerializable
                 $properties[$name] = $this->$name;
             }
 		}
-		return ['properties' => $properties];
+		return (!empty($this->id) ? ['id' => $this->id] : [])+['properties' => $properties];
 	}
 
 	/**
