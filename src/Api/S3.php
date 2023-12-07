@@ -46,7 +46,7 @@ class S3
 		}
 		$msgs = [];
 		try {
-			$user = Cloud\User::get($user['email'], 2);
+			$user = Cloud\User::get($user['email'], 3);
 			$msgs[] = lang('User already exists.');
 		}
 		catch(Api\Exception\NotFound $e) {
@@ -56,9 +56,12 @@ class S3
 				]+$user);
 			$msgs[] = lang('User created.');
 		}
-		if (!isset($user->entities) || empty($user->entities['groups']['items']))
+		if (!$group) $group = 'S3customers';
+		if (!array_filter($user->entities['groups']['items'] ?? [], static function($item) use ($group)
 		{
-			$user->addMembership($group = $group ?: 'S3customers');
+			return $item['properties']['name'] === $group;
+		}) && $user->addMembership($group))
+		{
 			$msgs[] = lang('User added to group "%1"', $group);
 		}
 		$key = current($user->getS3keys());

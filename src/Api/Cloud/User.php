@@ -74,12 +74,20 @@ class User extends Base
 	 * Add user to group
 	 *
 	 * @param $group group-name or -ID
-	 * @return void
+	 * @return bool true added, false already a member
 	 */
 	public function addMembership($group)
 	{
 		$group = Group::get($group);
+		foreach($this->entities['groups']['items'] as $item)
+		{
+			if ($group->id === $item['id'])
+			{
+				return false;
+			}
+		}
 		$group->addMember($this);
+		return true;
 	}
 
 	/**
@@ -92,7 +100,7 @@ class User extends Base
 	public function getS3keys()
 	{
 		$keys = [];
-		foreach(self::call(self::BASE."/$this->id/s3keys", ['depth' => 1]) as $item)
+		foreach($this->entities['s3Keys']['items'] ?: self::call(self::BASE."/$this->id/s3keys", ['depth' => 1]) as $item)
 		{
 			$keys[] = new S3key($item);
 		}
