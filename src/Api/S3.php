@@ -125,6 +125,17 @@ class S3
 		return str_replace('.', '-',
 			preg_replace('/^([^.]+)\.egroupware(-italia)?\.(.*)$/', '$1-$3', $instance));
 	}
+
+	/**
+	 * Delete instance user incl. S3 buckets
+	 *
+	 * @param string $instance instance domain e.g. test.egroupware.de
+	 * @throws Api\Exception\NotFound
+	 */
+	static function delete(string $instance)
+	{
+		Cloud\User::get('s3@'.$instance)->delete();
+	}
 }
 
 /**
