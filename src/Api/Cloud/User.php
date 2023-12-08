@@ -24,7 +24,7 @@ class User extends Base
 	protected bool $administrator=false;
 	protected bool $forceSecAuth;
 	protected bool $secAuthActive;
-	protected array $entities;
+	protected $entities;
 
 	static protected array $properties = [
 		'firstname' => 'string',
