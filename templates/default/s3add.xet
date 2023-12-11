@@ -41,6 +41,8 @@
 					<groupbox span="all">
 						<caption label="S3-Storages (s3_storages)"/>
 						<description id="s3_storages" span="all"/>
+						<et2-button label="Delete user &amp; buckets" id="button[delete]"
+							onclick="et2_dialog.confirm(widget,'This can NOT be undone!','Delete user and all buckets?')"></et2-button>
 					</groupbox>
 				</row>
 			</rows>

@@ -48,6 +48,13 @@ class profitbricks_ui
 
 					case 'clear':
 						$content = [];
+						break;
+
+					case 'delete':
+						S3::delete($content['instance']);
+						Api\Framework::message("User and all buckets successful deleted.");
+						$content = [];
+						break;
 				}
 			}
 			catch (\Exception $e) {

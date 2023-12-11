@@ -264,8 +264,9 @@ abstract class Base implements \JsonSerializable
 	 * @param array $headers
 	 * @param string $method "GET" (default), "POST", "PUT" or "DELETE"
 	 * @param string|array|object $body
-	 * @return array with items, for collection or just response data otherwise
-	 * @throws Api\Exception\NotFound
+	 * @return array|string with items, for collection or just response data otherwise, or empty body for DELETE or 204 No Content
+	 * @throws Api\Exception on connection error
+	 * @throws Api\Exception\NotFound on non 2xx status
 	 */
 	protected static function call(string $what, array $get_params=[], array $headers=[], $method='GET', $body='', float $timeout=2)
 	{
@@ -287,15 +288,30 @@ abstract class Base implements \JsonSerializable
 			$body = '';
 		}
 		if (!($f = self::httpOpen($url, $method, $body, $headers, $timeout)) ||
-			!($response = stream_get_contents($f)) ||
-			!($json = self::parseResponse($response)) ||
-			!($data = json_decode($json, true)) ||
-			empty($data['type']) && empty($data['token']) ||
-			$data['type'] == 'collection' && (!isset($data['items']) || !is_array($data['items'])))
+			!($response = stream_get_contents($f)))
+		{
+			throw new Api\Exception("Request to '$url' failed", 2);
+		}
+		if ($f) fclose($f);
+		$response_body = self::parseResponse($response, $response_headers);
+		// empty body and non 2xx http-status --> throw
+		if ($response_body === '' && ((int)$response_headers[0] < 200 || (int)$response_headers[0] >= 300))
 		{
 			error_log("Request to '$url' failed: ".$response);
-			if ($f) fclose($f);
-            if (isset($data['messages']))
+			throw new Api\Exception\NotFound("Request to '$url' failed with $response_headers[0]", (int)$response_headers[0]);
+		}
+		// empty body and DELETE or 204 No Content return empty body
+		if ($response_body === '' && ($method === DELETE || (int)$response_headers[0] === 204 /* No Content */))
+		{
+			return $response_body;
+		}
+		// otherwise decode JSON
+		if (!($data = json_decode($response_body, true)) ||
+			empty($data['type']) && empty($data['token']) ||
+			$data['type'] === 'collection' && (!isset($data['items']) || !is_array($data['items'])))
+		{
+			error_log("Request to '$url' failed: ".$response);
+           if (isset($data['messages']))
             {
                 $messages = ': '.implode(', ', array_map(static function(array $message)
                 {
@@ -304,7 +320,6 @@ abstract class Base implements \JsonSerializable
             }
 			throw new Api\Exception\NotFound("Request to '$url' failed".($messages??'!'), $data['httpStatus'] ?? 2);
 		}
-		if ($f) fclose($f);
 
 		return $data['type'] == 'collection' ? $data['items'] : $data;
 	}
