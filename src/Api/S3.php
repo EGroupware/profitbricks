@@ -130,11 +130,41 @@ class S3
 	 * Delete instance user incl. S3 buckets
 	 *
 	 * @param string $instance instance domain e.g. test.egroupware.de
+	 * @param array $s3_storages configured s3 storages
 	 * @throws Api\Exception\NotFound
 	 */
-	static function delete(string $instance)
+	static function delete(string $instance, array $s3_storages=[])
 	{
-		Cloud\User::get('s3@'.$instance)->delete();
+		$user = Cloud\User::get('s3@'.$instance);
+
+		// explicitly delete first two buckets (not 3rd user supplied one!)
+		foreach(array_slice($s3_storages, 0, 2) as $storage)
+		{
+			// AsyncAWS does NOT validate IONOS LocationConstraint / regions,
+			// so we have to overwrite / alias the constraint class
+			class_alias(AlwaysExists::class, 'AsyncAws\S3\Enum\BucketLocationConstraint');
+			foreach([
+		        'de' => 'https://s3-eu-central-1.ionoscloud.com',
+		        'eu-central-2' => 'https://s3-eu-central-2.ionoscloud.com',
+	        ] as $region => $endpoint)
+			{
+				if ($storage['endpoint'] === $endpoint)
+				{
+					$s3 = new AsyncAws\S3\S3Client([
+						'endpoint' => $endpoint,
+						'accessKeyId' => $storage['accessKeyId'],
+						'accessKeySecret' => $storage['accessKeySecret'],
+						'region' => $region,
+					]);
+					$s3->deleteBucket([
+						'Bucket' => $storage['Bucket'],
+					])->resolve();
+				}
+			}
+		}
+
+		// finally delete the user
+		$user->delete();
 	}
 }
 

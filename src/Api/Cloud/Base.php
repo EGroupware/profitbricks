@@ -197,10 +197,11 @@ abstract class Base implements \JsonSerializable
 	 */
 	public function delete()
 	{
-		if (empty($this->id) || !self::call(static::BASE.'/'.$this->id, [], [], 'DELETE'))
+		if (empty($this->id))
 		{
 			throw new Api\Exception\NotFound("Item with id '$this->id' not found!");
 		}
+		self::call(static::BASE.'/'.$this->id, [], [], 'DELETE');
 	}
 
 	/**
