@@ -59,6 +59,11 @@ abstract class Base implements \JsonSerializable
 	 */
 	static protected array $defaults = [];
 
+	/**
+	 * @var ?string path for logging requests and responses
+	 */
+	static public $log = null;//'/var/lib/egroupware/default/ionos-api.log';
+
  	protected function __construct(array $attrs, bool $check=false)
 	{
 		foreach($attrs+static::$defaults as $name => $value)
@@ -172,14 +177,14 @@ abstract class Base implements \JsonSerializable
             if (!empty($id) && !empty($attr=static::UNIQ_ATTR))
             {
 	            $offset = 0;
-	            $limit = 100;
+	            $limit = 500;
 	            do
 	            {
-		            foreach ($items = static::index($depth, $offset, $limit) as $item)
+		            foreach ($items = static::index(1, $offset, $limit) as $item)
 		            {
 			            if ($item->$attr === $id)
 			            {
-				            return $item;
+				            return $depth === 1 ? $item : static::get($item->$attr, $depth);
 			            }
 		            }
 		            $offset += $limit;
@@ -258,6 +263,26 @@ abstract class Base implements \JsonSerializable
 	}
 
 	/**
+	 * Log a message/request to self::$log, if set, or error_log() for $level==="error", if not
+	 *
+	 * @param string $message
+	 * @param string $level "error" or "info"
+	 * @return void
+	 */
+	protected static function log($message, $level='error')
+	{
+		if (!empty(self::$log) && ($fp = fopen(self::$log, 'a')))
+		{
+			fwrite($fp, date('Y-m-d H:i:s  ').strtoupper($level).' '.$message."\n");
+			fclose($fp);
+		}
+		elseif ($level === 'error')
+		{
+			error_log($message);
+		}
+	}
+
+	/**
 	 * Get items from API
 	 *
 	 * @param string $what eg. "datacenters" or "datacenters/$id/servers" or full URL eg. self::AUTH_API.'token/generate'
@@ -291,18 +316,20 @@ abstract class Base implements \JsonSerializable
 		if (!($f = self::httpOpen($url, $method, $body, $headers, $timeout)) ||
 			!($response = stream_get_contents($f)))
 		{
+			self::log("Request to '$url' failed", 'error');
 			throw new Api\Exception("Request to '$url' failed", 2);
 		}
 		if ($f) fclose($f);
 		$response_body = self::parseResponse($response, $response_headers);
 		// empty body and non 2xx http-status --> throw
-		if ($response_body === '' && ((int)$response_headers[0] < 200 || (int)$response_headers[0] >= 300))
+		$http_status = preg_match('#^HTTP/\d\.\d (\d+) #', $response_headers[0], $matches) ? (int)$matches[1] : null;
+		if ($response_body === '' && ($http_status < 200 || $http_status >= 300))
 		{
-			error_log("Request to '$url' failed: ".$response);
-			throw new Api\Exception\NotFound("Request to '$url' failed with $response_headers[0]", (int)$response_headers[0]);
+			self::log("Request to '$url' failed with $response_headers[0]", 'error');
+			throw new Api\Exception\NotFound("Request to '$url' failed with $response_headers[0]", $http_status);
 		}
 		// empty body and DELETE or 204 No Content return empty body
-		if ($response_body === '' && ($method === DELETE || (int)$response_headers[0] === 204 /* No Content */))
+		if ($response_body === '' && ($method === DELETE || $http_status === 204 /* No Content */))
 		{
 			return $response_body;
 		}
@@ -311,14 +338,15 @@ abstract class Base implements \JsonSerializable
 			empty($data['type']) && empty($data['token']) ||
 			$data['type'] === 'collection' && (!isset($data['items']) || !is_array($data['items'])))
 		{
-			error_log("Request to '$url' failed: ".$response);
-           if (isset($data['messages']))
+			self::log("Request to '$url' failed: ".$response, 'error');
+			if (isset($data['messages']))
             {
                 $messages = ': '.implode(', ', array_map(static function(array $message)
                 {
                     return $message['message'].' ('.$message['errorCode'].')';
                 }, $data['messages']));
             }
+			self::log("Request to '$url' failed".($messages??'!'), 'error');
 			throw new Api\Exception\NotFound("Request to '$url' failed".($messages??'!'), $data['httpStatus'] ?? 2);
 		}
 
@@ -354,7 +382,7 @@ abstract class Base implements \JsonSerializable
 		if (!($sock = stream_socket_client($addr, $errno, $errstr, $timeout,
 			$timeout ? STREAM_CLIENT_CONNECT : STREAM_CLIENT_ASYNC_CONNECTC)))
 		{
-			error_log(__METHOD__."('$url', ...) stream_socket_client('$addr', ...) $errstr ($errno)");
+			self::log(__METHOD__."('$url', ...) stream_socket_client('$addr', ...) $errstr ($errno)", 'error');
 			return false;
 		}
 		$request = $method.' '.$parts['path'].(empty($parts['query'])?'':'?'.$parts['query'])." HTTP/1.1\r\n".
@@ -375,14 +403,15 @@ abstract class Base implements \JsonSerializable
 			$request .= $name.': '.$value."\r\n";
 		}
 		$request .= "\r\n";
-		//if ($method != 'GET') error_log($request.$body);
+
+		// do NOT log content of Authorization header
+		self::log(preg_replace('/^Authorization: ([^ ]+) .*$/mi', 'Authorization: $1 ********', $request), 'info');
 
 		if (fwrite($sock, $request.$body) === false)
 		{
-			error_log(__METHOD__."('$url', ...) error sending request!");
+			self::log(__METHOD__."('$url', ...) error sending request!", 'error');
 			fclose($sock);
 			return false;
-
 		}
 		return $sock;
 	}
@@ -410,7 +439,7 @@ abstract class Base implements \JsonSerializable
 				$headers[] = $parts[0];
 			}
 		}
-		// dechunk body if necessary
+		// de-chunk body if necessary
 		if (isset($headers['transfer-encoding']) && $headers['transfer-encoding'] == 'chunked')
 		{
 			$chunked = $body;
@@ -421,6 +450,8 @@ abstract class Base implements \JsonSerializable
 				if (true) $chunked = substr($chunked, hexdec($size)+2);	// +2 for "\r\n" behind chunk
 			}
 		}
+		// log the de-chunked body
+		self::log($header."\r\n\r\n".$body, 'info');
 		return $body;
 	}
 
