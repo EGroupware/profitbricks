@@ -177,26 +177,29 @@ abstract class Base implements \JsonSerializable
             if (!empty($id) && !empty($attr=static::UNIQ_ATTR))
             {
 	            $cache = Api\Cache::getInstance(static::class,$attr) ?? [];
-				if (isset($cache[$id]))
+				if (!isset($cache[$id]))
 				{
-					return static::get($cache[$id], $depth);
+					$offset = 0;
+					$limit = 100;
+					do
+					{
+						foreach ($items = static::index(1, $offset, $limit) as $item)
+						{
+							$cache[$item->$attr] = $item->id;
+							if ($item->$attr === $id && $depth === 1)
+							{
+								$ret = $item;
+							}
+						}
+						$offset += $limit;
+					} while (count($items) === $limit && !isset($cache[$id]));
+
+					Api\Cache::setInstance(static::class, $attr, $cache, 3600);
 				}
-	            $offset = 0;
-	            $limit = 100;
-	            do
+	            if (isset($cache[$id]))
 	            {
-		            foreach ($items = static::index(1, $offset, $limit) as $item)
-		            {
-						$cache[$item->$attr] = $item->id;
-			            if ($item->$attr === $id)
-			            {
-				            Api\Cache::setInstance(static::class,$attr, $cache, 3600);
-				            return $depth === 1 ? $item : static::get($item->$attr, $depth);
-			            }
-		            }
-		            $offset += $limit;
-	            } while (count($items) === $limit);
-	            Api\Cache::setInstance(static::class,$attr, $cache, 3600);
+		            return $ret ?? new static(self::call(static::BASE.'/'.$cache[$id], ['depth' => $depth]));
+	            }
             }
 			throw new Api\Exception\NotFound("Invalid value for id: '$id' --> NOT found!");
 		}
@@ -321,13 +324,17 @@ abstract class Base implements \JsonSerializable
 		{
 			$body = '';
 		}
-		if (!($f = self::httpOpen($url, $method, $body, $headers, $timeout)) ||
-			!($response = stream_get_contents($f)))
+		if (!($f = self::httpOpen($url, $method, $body, $headers, $timeout)))
 		{
 			self::log("Request to '$url' failed", 'error');
 			throw new Api\Exception("Request to '$url' failed", 2);
 		}
-		if ($f) fclose($f);
+		$response = '';
+		do {
+			$response .= stream_get_contents($f);
+		}
+		while (!feof($f));
+		fclose($f);
 		$response_body = self::parseResponse($response, $response_headers);
 		// empty body and non 2xx http-status --> throw
 		$http_status = preg_match('#^HTTP/\d\.\d (\d+) #', $response_headers[0], $matches) ? (int)$matches[1] : null;
