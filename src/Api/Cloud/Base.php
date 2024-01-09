@@ -176,29 +176,9 @@ abstract class Base implements \JsonSerializable
 		{
             if (!empty($id) && !empty($attr=static::UNIQ_ATTR))
             {
-	            $cache = Api\Cache::getInstance(static::class,$attr) ?? [];
-				if (!isset($cache[$id]))
-				{
-					$offset = 0;
-					$limit = 100;
-					do
-					{
-						foreach ($items = static::index(1, $offset, $limit) as $item)
-						{
-							$cache[$item->$attr] = $item->id;
-							if ($item->$attr === $id && $depth === 1)
-							{
-								$ret = $item;
-							}
-						}
-						$offset += $limit;
-					} while (count($items) === $limit && !isset($cache[$id]));
-
-					Api\Cache::setInstance(static::class, $attr, $cache, 3600);
-				}
-	            if (isset($cache[$id]))
+	            foreach(self::call(static::BASE, ['depth' => $depth, 'filter.'.$attr => $id]) as $item)
 	            {
-		            return $ret ?? new static(self::call(static::BASE.'/'.$cache[$id], ['depth' => $depth]));
+					return new static($item);
 	            }
             }
 			throw new Api\Exception\NotFound("Invalid value for id: '$id' --> NOT found!");
