@@ -41,6 +41,26 @@ class profitbricks_api
 	}
 
 	/**
+	 * Check if given JWT expires in the given time-span
+	 *
+	 * @param string $token
+	 * @param string $min
+	 * @param Api\DateTime|null $exp on return expiration date
+	 * @return bool
+	 * @throws Api\Exception
+	 * @throws JsonException
+	 */
+	static function jwtExpires(string $token, string $min='2month', Api\DateTime &$exp=null)
+	{
+		list(, $payload) = explode('.', $token);
+		$data = json_decode(base64_decode($payload), true, 512, JSON_THROW_ON_ERROR);
+
+		$exp = new Api\DateTime($data['exp']);
+
+		return $exp < new Api\DateTime($min);
+	}
+
+	/**
 	 * Get datacenters
 	 *
 	 * @param boolean $just_names =false return just id => name pairs
@@ -260,12 +280,13 @@ class profitbricks_api
 	{
 		self::$config = Api\Config::read(self::APP);
 
-		// generate token to use instead of password
-		if (!empty(self::$config['username']) && !empty(self::$config['password']) && empty(self::$config['token']))
+		// generate or renew token, if it's about to expire
+		if (!empty(self::$config['username']) && !empty(self::$config['password']) && empty(self::$config['token']) ||
+			!empty(self::$config['token']) && self::jwtExpires(self::$config['token'], '2month'))
 		{
-			if (self::$config['token'] = profitbricks_api::tokenGenerate())
+			if (($token = self::tokenGenerate()))
 			{
-				Api\Config::save_value('token', self::$config['token'], self::APP);
+				Api\Config::save_value('token', self::$config['token']=$token, self::APP);
 				Api\Config::save_value('password', self::$config['password']=null, self::APP);
 			}
 		}
