@@ -324,7 +324,7 @@ abstract class Base implements \JsonSerializable
 			throw new Api\Exception\NotFound("Request to '$url' failed with $response_headers[0]", $http_status);
 		}
 		// empty body and DELETE or 204 No Content return empty body
-		if ($response_body === '' && ($method === DELETE || $http_status === 204 /* No Content */))
+		if ($response_body === '' && ($method === 'DELETE' || $http_status === 204 /* No Content */))
 		{
 			return $response_body;
 		}

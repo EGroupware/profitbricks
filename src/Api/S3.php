@@ -133,7 +133,7 @@ class S3
 	 * @param array $s3_storages configured s3 storages
 	 * @throws Api\Exception\NotFound
 	 */
-	static function delete(string $instance, array $s3_storages=[])
+	static function delete(string $instance, array $s3_storages=[], int $retry=2)
 	{
 		$user = Cloud\User::get('s3@'.$instance);
 
@@ -156,9 +156,54 @@ class S3
 						'accessKeySecret' => $storage['accessKeySecret'],
 						'region' => $region,
 					]);
-					$s3->deleteBucket([
-						'Bucket' => $storage['Bucket'],
-					])->resolve();
+					try {
+						$request = $s3-> listObjectsV2([
+							'Bucket' => $storage['Bucket'],
+						]);
+						$objects = [];
+						/** @var $file AwsObject */
+						foreach($request->getIterator() as $file)
+						{
+							$objects[] = ['Key' => $file->getKey()];
+							if (count($objects) === 1000)
+							{
+								$s3->deleteObjects([
+									'Bucket' => $storage['Bucket'],
+									'Delete' => [
+										'Objects' => $objects,
+									],
+								])->resolve();
+								$objects = [];
+							}
+						}
+						if ($objects)
+						{
+							$s3->deleteObjects([
+								'Bucket' => $storage['Bucket'],
+								'Delete' => [
+									'Objects' => $objects,
+								],
+							])->resolve();
+						}
+						$s3->deleteBucket([
+							'Bucket' => $storage['Bucket'],
+						])->resolve();
+					}
+					catch(\Exception $e)
+					{
+						// ignore if bucket has already been deleted / does not exist
+						if ($e->getCode() !== 404)
+						{
+							// we also sometimes get 409 BucketNotEmpty, even if we iterate over all files, to let's retry
+							if ($retry > 0)
+							{
+								sleep(1);
+								return self::delete($instance, $s3_storages, $retry-1);
+							}
+							$e->detail = $e->getAwsMessage().' ('.$e->getAwsCode().')';
+							throw $e;
+						}
+					}
 				}
 			}
 		}

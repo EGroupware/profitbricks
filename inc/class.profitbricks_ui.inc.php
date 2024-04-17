@@ -48,10 +48,11 @@ class profitbricks_ui
 
 					case 'clear':
 						$content = [];
+						unset($storages);
 						break;
 
 					case 'delete':
-						S3::delete($content['instance']);
+						S3::delete($content['instance'], $content['s3_storages']);
 						Api\Framework::message("User and all buckets successful deleted.");
 						$content = [];
 						break;
@@ -63,7 +64,7 @@ class profitbricks_ui
 			}
 		}
 
-		$tpl->exec('profitbricks.profitbricks_ui.s3add', $content ?? []);
+		$tpl->exec('profitbricks.profitbricks_ui.s3add', $content ?? [], null, null, ['s3_storages' => $storages??null]);
 	}
 
 	/**
