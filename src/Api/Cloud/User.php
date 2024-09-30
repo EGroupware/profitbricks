@@ -100,7 +100,7 @@ class User extends Base
 	public function getS3keys()
 	{
 		$keys = [];
-		foreach($this->entities['s3Keys']['items'] ?: self::call(self::BASE."/$this->id/s3keys", ['depth' => 1]) as $item)
+		foreach($this->entities['s3Keys']['items'] ?: [self::call(self::BASE."/$this->id/s3keys", [], [], 'POST')] as $item)
 		{
 			$keys[] = new S3key($item);
 		}
