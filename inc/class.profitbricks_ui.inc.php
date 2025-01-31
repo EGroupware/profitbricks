@@ -29,6 +29,7 @@ class profitbricks_ui
 	function s3add(array $content=null)
 	{
 		$tpl = new Etemplate('profitbricks.s3add');
+		$rows = 1000;
 
 		if (is_array($content))
 		{
@@ -56,6 +57,15 @@ class profitbricks_ui
 						Api\Framework::message("User and all buckets successful deleted.");
 						$content = [];
 						break;
+
+					case 'list':
+						$storages = $content['s3_storages'];
+						$content['s3_storages'] = json_encode($storages, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES);
+						$content['objects'] = S3::list($storages[$content['bucket']], $content['start_after']??null, $rows);
+						$last = end($content['objects']);
+						$content['start_after'] = $content['objects'] && count($content['objects']) === $rows ? $last['Key'] : null;
+						array_unshift($content['objects'], false);
+						break;
 				}
 			}
 			catch (\Exception $e) {
@@ -63,8 +73,18 @@ class profitbricks_ui
 				unset($content['s3_storages']);
 			}
 		}
+		$content['list_label'] = empty($content['start_after']) ? lang('List first %1', $rows) : lang('Next %1', $rows);
 
-		$tpl->exec('profitbricks.profitbricks_ui.s3add', $content ?? [], null, null, ['s3_storages' => $storages??null]);
+		$buckets = array_map(static function(array $storage) {
+			return $storage['Bucket'];
+		}, $storages ?? []);
+
+		$tpl->exec('profitbricks.profitbricks_ui.s3add', $content ?? [], [
+			'bucket' => $buckets,
+		], null, [
+			's3_storages' => $storages??null,
+			'start_after' => $content['start_after'] ?? null,
+		]);
 	}
 
 	/**

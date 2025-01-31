@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE overlay PUBLIC "-//EGroupware GmbH//eTemplate 2//EN" "http://www.egroupware.org/etemplate2.dtd">
-<!-- $Id$ -->
+<!DOCTYPE overlay PUBLIC "-//EGroupware GmbH//eTemplate 2.0//EN" "https://www.egroupware.org/etemplate2.0.dtd">
 <overlay>
 	<template id="profitbricks.s3add" template="" lang="" group="0" version="16.1">
 		<grid width="100%" class="admin-config egwGridView_grid">
@@ -10,40 +9,69 @@
 			</columns>
 			<rows>
 				<row>
-					<description value="Add/get S3 credentials" span="all" class="subHeader"/>
+					<et2-description  value="Add/get S3 credentials" span="all" class="subHeader"></et2-description>
 				</row>
 				<row>
-					<description value="Instance"/>
-					<textbox id="instance" size="40" onchange="app.profitbricks.instanceChanged"/>
+					<et2-description  value="Instance"></et2-description>
+					<et2-textbox  id="instance" onchange="app.profitbricks.instanceChanged"></et2-textbox>
 				</row>
 				<row>
-					<description value="Firstname"/>
-					<hbox>
-						<textbox id="firstname" size="20"/>
-						<textbox label="Lastname" id="lastname" size="20"/>
-					</hbox>
+					<et2-description  value="Firstname"></et2-description>
+					<et2-hbox>
+						<et2-textbox  id="firstname"></et2-textbox>
+						<et2-textbox  label="Lastname" id="lastname"></et2-textbox>
+					</et2-hbox>
 				</row>
 				<row>
-					<description value="Email"/>
-					<url-email id="email" size="40"/>
+					<et2-description  value="Email"></et2-description>
+					<et2-url-email  id="email"></et2-url-email>
 				</row>
 				<row>
-					<description value="Password"/>
-					<passwd id="password" size="40" suggest="20"/>
+					<et2-description  value="Password"></et2-description>
+					<et2-password  id="password" suggest="20"></et2-password>
 				</row>
 				<row>
-					<hbox>
-						<button id="button[create]" label="Create"/>
-						<button id="button[clear]" label="Clear"/>
-					</hbox>
+					<et2-hbox>
+						<et2-button  id="button[create]" label="Create"></et2-button>
+						<et2-button  id="button[clear]" label="Clear"></et2-button>
+					</et2-hbox>
 				</row>
 				<row disabled="!@s3_storages">
-					<groupbox span="all">
-						<caption label="S3-Storages (s3_storages)"/>
-						<description id="s3_storages" span="all"/>
-						<et2-button label="Delete user &amp; buckets" id="button[delete]"
-							onclick="et2_dialog.confirm(widget,'This can NOT be undone!','Delete user and all buckets?')"></et2-button>
-					</groupbox>
+					<et2-groupbox  span="all" summary="S3-Storages (s3_storages)">
+						<et2-description  id="s3_storages" span="all"></et2-description>
+						<et2-button  label="Delete user &amp; buckets" id="button[delete]" onclick="Et2Dialog.confirm(widget,'This can NOT be undone!','Delete user and all buckets?')"></et2-button>
+						<et2-hbox>
+							<et2-select  label="List files from bucket" id="bucket"></et2-select>
+							<et2-button  id="button[list]" label="@list_label"></et2-button>
+							<et2-description  style="width: 50%"></et2-description>
+						</et2-hbox>
+					</et2-groupbox>
+				</row>
+				<row disabled="!@objects">
+					<et2-groupbox  span="all" summary="Objects">
+						<grid id="objects">
+							<columns>
+								<column/>
+								<column/>
+								<column/>
+								<column/>
+							</columns>
+							<rows>
+								<row class="th">
+									<et2-description  value="Row"></et2-description>
+									<et2-description  value="Key"></et2-description>
+									<et2-description  value="Size" align="right"></et2-description>
+									<et2-description  value="Last modified"></et2-description>
+								</row>
+								<row>
+									<et2-description  value="$row"></et2-description>
+									<et2-description  id="${row}[Key]"></et2-description>
+									<vfs-size id="${row}[Size]" align="right"></vfs-size>
+									<et2-date-time  id="${row}[LastModified]" readonly="true"></et2-date-time>
+								</row>
+							</rows>
+						</grid>
+					</et2-groupbox>
 				</row>
 			</rows>
 		</grid>

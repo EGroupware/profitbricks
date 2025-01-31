@@ -137,12 +137,14 @@ class S3
 	{
 		$user = Cloud\User::get('s3@'.$instance);
 
+		// AsyncAWS does NOT validate IONOS LocationConstraint / regions,
+		// so we have to overwrite / alias the constraint class
+		class_alias(AlwaysExists::class, 'AsyncAws\S3\Enum\BucketLocationConstraint');
+
 		// explicitly delete first two buckets (not 3rd user supplied one!)
 		foreach(array_slice($s3_storages, 0, 2) as $storage)
 		{
-			// AsyncAWS does NOT validate IONOS LocationConstraint / regions,
-			// so we have to overwrite / alias the constraint class
-			class_alias(AlwaysExists::class, 'AsyncAws\S3\Enum\BucketLocationConstraint');
+			unset($file);
 			foreach([
 		        'de' => 'https://s3-eu-central-1.ionoscloud.com',
 		        'eu-central-2' => 'https://s3-eu-central-2.ionoscloud.com',
@@ -157,7 +159,7 @@ class S3
 						'region' => $region,
 					]);
 					try {
-						$request = $s3-> listObjectsV2([
+						$request = $s3->listObjectsV2([
 							'Bucket' => $storage['Bucket'],
 						]);
 						$objects = [];
@@ -185,6 +187,11 @@ class S3
 								],
 							])->resolve();
 						}
+						// if we have just deleted some files, give it a little time, otherwise with get a 409 Bucket not empty
+						if (isset($file))
+						{
+							sleep(1);
+						}
 						$s3->deleteBucket([
 							'Bucket' => $storage['Bucket'],
 						])->resolve();
@@ -210,6 +217,45 @@ class S3
 
 		// finally delete the user
 		$user->delete();
+	}
+
+	static function list(array $storage, ?string $start_after=null, int $rows=100)
+	{
+		// AsyncAWS does NOT validate IONOS LocationConstraint / regions,
+		// so we have to overwrite / alias the constraint class
+		class_alias(AlwaysExists::class, 'AsyncAws\S3\Enum\BucketLocationConstraint');
+		foreach([
+	        'de' => 'https://s3-eu-central-1.ionoscloud.com',
+	        'eu-central-2' => 'https://s3-eu-central-2.ionoscloud.com',
+        ] as $region => $endpoint)
+		{
+			if ($storage['endpoint'] === $endpoint)
+			{
+				$s3 = new AsyncAws\S3\S3Client([
+					'endpoint' => $endpoint,
+					'accessKeyId' => $storage['accessKeyId'],
+					'accessKeySecret' => $storage['accessKeySecret'],
+					'region' => $region,
+				]);
+				$objects = [];
+				$request = $s3->listObjectsV2(array_filter([
+					'Bucket' => $storage['Bucket'],
+					'StartAfter' => $start_after,
+					'MaxKeys' => $rows,
+				]));
+				/** @var $file AwsObject */
+				foreach ($request->getIterator() as $file)
+				{
+					$objects[] = [
+						'Key' => $file->getKey(),
+						'Size' => $file->getSize(),
+						'LastModified' => $file->getLastModified(),
+					];
+					if (count($objects) >= $rows) break;
+				}
+				return $objects;
+			}
+		}
 	}
 }
 
