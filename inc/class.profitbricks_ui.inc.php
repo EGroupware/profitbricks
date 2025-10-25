@@ -26,7 +26,7 @@ class profitbricks_ui
 		's3add' => true,
 	);
 
-	function s3add(array $content=null)
+	function s3add(?array $content=null)
 	{
 		$tpl = new Etemplate('profitbricks.s3add');
 		$rows = 1000;
@@ -90,9 +90,9 @@ class profitbricks_ui
 	/**
 	 * Show list of servers
 	 *
-	 * @param array $content =null
+	 * @param ?array $content =null
 	 */
-	function index(array $content=null)
+	function index(?array $content=null)
 	{
 		$etpl = new Etemplate('profitbricks.index');
 

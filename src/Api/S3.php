@@ -25,7 +25,7 @@ class S3
 	 * @param ?string[] &$msgs
 	 * @return array[] storage config array of array with values for keys 'endpoint', 'accessKeyId', 'accessKeySecret' and 'Bucket'
 	 */
-	static function create(string $instance, array $user=null, array &$msgs=null, string $group='S3customers')
+	static function create(string $instance, ?array $user=null, ?array &$msgs=null, string $group='S3customers')
 	{
 		if (!$user)
 		{

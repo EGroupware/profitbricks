@@ -31,7 +31,7 @@ class profitbricks_api
 	 * @param ?string $contract_number send as X-Contract-Number header, required for multiple contracts
 	 * @return ?string
 	 */
-	static function tokenGenerate(string $contract_number=null)
+	static function tokenGenerate(?string $contract_number=null)
 	{
 		$response = self::get(self::AUTH_API.'tokens/generate', null, !empty($contract_number) ? [
 			'X-Contract-Number' => $contract_number,
